@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mysql:
+    build:
+      context: ./db-scripts
+      dockerfile: Dockerfile
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_DATABASE: greetings
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./db-scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    
+  go-backend:
+    build:
+      context: .
+      dockerfile: go-server/Dockerfile
+    environment:
+      DB_USER: root
+      DB_PASSWORD: pass
+      DB_HOST: mysql
+      DB_NAME: greetings
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    entrypoint: ["/app/wait-for-it.sh", "mysql:3306", "--", "/go/bin/app"]
+
+  flask-backend:
+    build:
+      context: ./flask-server
+      dockerfile: Dockerfile
+    environment:
+      DB_USER: root
+      DB_PASSWORD: pass
+      DB_HOST: mysql
+      DB_NAME: greetings
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mysql
+
+volumes:
+  mysql-data:
